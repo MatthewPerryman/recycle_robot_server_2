@@ -113,8 +113,8 @@ def get_wrist_angle():
 	return jsonify({"angle": angle})
 
 
-@app.route('/get_photo', methods=['GET'])
-def get_photo():
+@app.route('/take_photo', methods=['GET'])
+def take_photo():
 	image_stream.set_focus_mode("Continuous")
 	# wait for camera to settle
 	time.sleep(2)
