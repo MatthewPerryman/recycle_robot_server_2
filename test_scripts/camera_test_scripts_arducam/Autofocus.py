@@ -38,29 +38,7 @@ def calculation(camera):
 	rawCapture.truncate(0)
 	return laplacian(image)
 
-
-if __name__ == "__main__":
-	# vcm init
-	arducam_vcm.vcm_init()
-	# open camera
-	camera = picamera.PiCamera()
-
-	# open camera preview
-	camera.start_preview()
-	# set camera resolution to 640x480(Small resolution for faster speeds.)
-	camera.resolution = (640, 480)
-	time.sleep(0.1)
-	camera.shutter_speed = 30000
-
-	# https://picamera.readthedocs.io/en/release-1.13/recipes1.html?highlight=shutter%20speed#capturing-consistent-images
-	# camera.iso = 100
-	# camera.shutter_speed = camera.exposure_speed
-	# camera.exposure_mode = 'off'
-
-	# g = camera.awb_gains
-	# camera.awb_mode = 'off'
-	# camera.awb_gains = g
-
+def focus(camera):
 	print("Start focusing")
 
 	max_index = 10
@@ -78,7 +56,7 @@ if __name__ == "__main__":
 		if val > max_value:
 			max_index = focal_distance
 			max_value = val
-
+		
 		# If the image clarity starts to decrease
 		if val < last_value:
 			dec_count += 1
@@ -102,8 +80,30 @@ if __name__ == "__main__":
 	# save image to file.
 	camera.capture("test.jpg")
 	print("max index = %d,max value = %lf" % (max_index, max_value))
-	# while True:
-	#	time.sleep(1)
 
+
+if __name__ == "__main__":
+	# vcm init
+	arducam_vcm.vcm_init()
+	# open camera
+	camera = picamera.PiCamera()
+
+	# open camera preview
+	camera.start_preview()
+	# set camera resolution to 640x480(Small resolution for faster speeds.)
+	camera.resolution = (640, 480)
+	time.sleep(0.1)
+	camera.shutter_speed = 30000
+
+	# https://picamera.readthedocs.io/en/release-1.13/recipes1.html?highlight=shutter%20speed#capturing-consistent-images
+	# camera.iso = 100
+	# camera.shutter_speed = camera.exposure_speed
+	# camera.exposure_mode = 'off'
+
+	# g = camera.awb_gains
+	# camera.awb_mode = 'off'
+	# camera.awb_gains = g
+	
+	focus(camera)
 	camera.stop_preview()
 	camera.close()

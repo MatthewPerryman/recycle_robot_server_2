@@ -7,12 +7,12 @@ from utils import logging
 from libcamera import controls
 
 try:
-	from picamera2 import Picamera2
+	from picamera import Picamera
 except:
 	sys.exit(0)
 
 class ImageStream:
-	picam2 = Picamera2()
+	picam = Picamera()
 
 	# Flipping resolution doesn't work
 	resolution = (640, 480, 3)
@@ -22,23 +22,23 @@ class ImageStream:
 	# Set the focus mode
 	def set_focus_mode(self, focus_mode, focus_value=None):
 		if focus_mode == "Continuous":
-			self.picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
+			self.picam.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 		elif focus_mode == "Manual":
-			self.picam2.set_controls({"AfMode": controls.AfModeEnum.Manual})
+			self.picam.set_controls({"AfMode": controls.AfModeEnum.Manual})
 			if focus_value is None:
-				self.picam2.set_controls({"LensPosition": 5.6818181818})
+				self.picam.set_controls({"LensPosition": 5.6818181818})
 			else:
-				self.picam2.set_controls({"LensPosition": focus_value})
+				self.picam.set_controls({"LensPosition": focus_value})
 
 	# Get the focus mode
 	def get_focus_mode(self):
-		return self.picam2.capture_metadata()
+		return self.picam.capture_metadata()
 
 	def take_photo(self):
-		self.picam2.start()
+		self.picam.start()
 
 		# Capture one image with the default configurations.
-		image = self.picam2.capture_array("main")
+		image = self.picam.capture_array("main")
 
 		return image
 
@@ -64,13 +64,13 @@ class ImageStream:
 
 	def __init__(self):
 		# open camera
-		preview_config = self.picam2.create_still_configuration(main={"size": (640, 480)})
-		self.picam2.configure(preview_config)
+		preview_config = self.picam.create_still_configuration(main={"size": (640, 480)})
+		self.picam.configure(preview_config)
 
-		self.picam2.set_controls({"AfMode": controls.AfModeEnum.Manual})
-#		self.picam2.set_controls({"LensPosition": 5.6818181818})
+		self.picam.set_controls({"AfMode": controls.AfModeEnum.Manual})
+#		self.picam.set_controls({"LensPosition": 5.6818181818})
 
-		self.picam2.set_controls({"LensPosition": 10})
+		self.picam.set_controls({"LensPosition": 10})
 
 	def __del__(self):
-		self.picam2.close()
+		self.picam.close()

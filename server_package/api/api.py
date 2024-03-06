@@ -1,9 +1,9 @@
 # This code is only run on rpi server
 import json
 from flask import Flask, request, send_file, jsonify
-from Utils import Logging
-from .CamStream import ImageStream
-from .RobotArm import RobotController
+from utils import logging
+from .camera_controller import ImageStream
+from .robot_controller import RobotController
 import io
 import numpy as np
 import time

@@ -8,6 +8,7 @@ import logging
 import socketserver
 from threading import Condition
 from http import server
+from Autofocus import focus
 
 PAGE = """\
 <html>
@@ -61,6 +62,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 			self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
 			self.end_headers()
 			try:
+				focus(camera)
 				while True:
 					with output.condition:
 						output.condition.wait()
