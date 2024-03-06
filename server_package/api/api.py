@@ -33,9 +33,9 @@ def move_by_vector():
 	Yd = json_coord['Yd']
 	Zd = json_coord['Zd']
 
-	response = controller.move_by_vector((Xd, Yd, Zd))
+	has_moved = controller.move_by_vector((Xd, Yd, Zd))
 
-	return jsonify(response=response)
+	return jsonify(response=has_moved)
 
 
 # Method to reset robot location
@@ -143,7 +143,7 @@ def	set_focus_mode():
 
 @app.route('/get_simple_photo', methods=['GET'])
 def get_simple_photo():
-	image = image_stream.take_simple_photo()
+	image = image_stream.take_photo()
 	Logging.write_log("server", "Compress Image")
 
 	print(image.shape)
