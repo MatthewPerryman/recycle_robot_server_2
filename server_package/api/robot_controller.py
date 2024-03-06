@@ -14,7 +14,7 @@ class RobotController:
 		self.swift.waiting_ready(timeout=3)
 
 	## Move the robot arm by an increment value
-	def move_by_vector(self, vector, reverse_vector=False, speed=100000):
+	def move_by_vector(self, vector, speed=100000):
 		self.start_transmission()
 
 		# Calculate new position and send update
@@ -23,16 +23,13 @@ class RobotController:
 
 		print("Old Location: ", old)
 
-		if reverse_vector:
-			new_location = [old[0] - vector[0], old[1] - vector[1], old[2] - vector[2]]
-		else:
-			new_location = [old[0] + vector[0], old[1] + vector[1], old[2] + vector[2]]
+		new_location = [old[0] + vector[0], old[1] + vector[1], old[2] + vector[2]]
 
-		response = self.move_to(new_location)
+		has_moved = self.move_to(new_location)
 
 		self.end_transmission()
 
-		return response
+		return has_moved
 
 	## Move the robot arm to this vector
 	def move_to(self, new_location, speed=100000):
@@ -44,7 +41,7 @@ class RobotController:
 		# Check if the location is within bounds
 		if self.swift.check_pos_is_limit(new_location) is False:
 			# Wait = true to ensure response on move success or failure
-			response = self.swift.set_position(x=new_location[0], y=new_location[1], z=new_location[2], wait=True, speed=speed)
+			self.swift.set_position(x=new_location[0], y=new_location[1], z=new_location[2], wait=True, speed=speed)
 
 			self.end_transmission()
 
@@ -59,10 +56,10 @@ class RobotController:
 
 			# Move the wrist by the difference
 			self.swift.set_wrist(90+angle_diff, wait=True)
-			response = True
+			has_moved = True
 		else:
-			response = False
-		return response
+			has_moved = False
+		return has_moved
 
 	# Reset robot location
 	def reset(self, x=200, y=0, z=150):

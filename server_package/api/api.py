@@ -1,7 +1,7 @@
 # This code is only run on rpi server
 import json
 from flask import Flask, request, send_file, jsonify
-from utils import logging
+from utils import Logging
 from .camera_controller import ImageStream
 from .robot_controller import RobotController
 import io
@@ -33,9 +33,9 @@ def move_by_vector():
 	Yd = json_coord['Yd']
 	Zd = json_coord['Zd']
 
-	response = controller.move_by_vector((Xd, Yd, Zd))
+	has_moved = controller.move_by_vector((Xd, Yd, Zd))
 
-	return jsonify(response=response)
+	return jsonify(response=has_moved)
 
 
 # Method to reset robot location
