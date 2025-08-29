@@ -12,12 +12,15 @@ except:
 	sys.exit(0)
 
 class ImageStream:
-	picam2 = Picamera2()
+	def __init__(self, controller):
+		self.controller = controller
+		
+		self.picam2 = Picamera2()
 
-	# Flipping resolution doesn't work
-	resolution = (640, 480, 3)
-	# second frame 10mm below first frame
-	m_frame_distance = (10, 0, 0)
+		# Flipping resolution doesn't work
+		self.resolution = (640, 480, 3)
+		# second frame 10mm below first frame
+		self.m_frame_distance = (10, 0, 0)
 	
 	# Set the focus mode
 	def set_focus_mode(self, focus_mode, focus_value=None):
@@ -42,25 +45,25 @@ class ImageStream:
 
 		return image
 
-	def get_imgs_for_depth(self, arm_move_function, write_log):
+	def get_imgs_for_depth(self, write_log):
 		# Capture image 1
-		Logging.write_log("server", "First Photo")
+		logging.write_log("server", "First Photo")
 		img1 = self.take_photo()
 
 		# Move the robot right 10mm
-		Logging.write_log("server", "Move Arm 1")
-		arm_move_function(self.m_frame_distance)
+		logging.write_log("server", "Move Arm 1")
+		self.controller.move_by_vector(self.m_frame_distance)
 
 		# Capture image 2
-		Logging.write_log("server", "Second Photo")
+		logging.write_log("server", "Second Photo")
 		img2 = self.take_photo()
 
 		# Reset position
-		Logging.write_log("server", "Move Arm 2")
+		logging.write_log("server", "Move Arm 2")
 		arm_move_function(self.m_frame_distance, reverse_vector=True)
 
-		Logging.write_log("server", "Return from image_stream get depth images")
-		return np.flip(img1), np.flip(img2), self.picam2.capture_metadata()['LensPosition']
+		logging.write_log("server", "Return from image_stream get depth images")
+		return np.flip(img1), np.flip(img2)
 
 	def __init__(self):
 		# open camera

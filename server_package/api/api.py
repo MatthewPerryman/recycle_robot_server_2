@@ -11,9 +11,8 @@ import time
 app = Flask(__name__)
 
 # The camera is focussed here, therefore set up lighting before starting the app
-image_stream = ImageStream()
 controller = RobotController.RobotController()
-
+image_stream = ImageStream(controller)  # Pass the shared controller instance
 
 # API Control of Robot Arm
 @app.route('/update_position', methods=['POST'])
@@ -55,12 +54,12 @@ def get_images_for_depth():
 
 	logging.write_log("server", "Call image_stream get depth images")
 	# Take a photo, move the camera 1 cm to the right, take another
-	img1, img2, f_len = image_stream.get_imgs_for_depth(controller.move_by_vector, logging.write_log)
+	img1, img2 = image_stream.get_imgs_for_depth(logging.write_log)
 	print(f"img1: {img1.shape}, img2: {img2.shape}, f_len: {f_len}")
 
 	logging.write_log("server", "Compress Image")
 	buffer = io.BytesIO()
-	np.savez_compressed(buffer, img1, img2, f_len)
+	np.savez_compressed(buffer, img1, img2)
 	buffer.seek(0)
 
 	logging.write_log("server", "Send Images")
