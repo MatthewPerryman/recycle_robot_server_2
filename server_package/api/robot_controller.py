@@ -1,3 +1,5 @@
+import sys
+sys.path.append('/home/ubuntu/uarm')
 from uarm.wrapper import SwiftAPI
 
 

@@ -8,11 +8,12 @@ import io
 import numpy as np
 import time
 
+print("starting web server")
 app = Flask(__name__)
 
 # The camera is focussed here, therefore set up lighting before starting the app
 image_stream = ImageStream()
-controller = RobotController.RobotController()
+controller = RobotController()
 
 
 # API Control of Robot Arm
@@ -51,7 +52,9 @@ def get_images_for_depth():
 	logging.write_log("server", "\nNew Run:\n")
 
 	logging.write_log("server", "Reset Location")
-	reset_robot()
+
+
+
 
 	logging.write_log("server", "Call image_stream get depth images")
 	# Take a photo, move the camera 1 cm to the right, take another
@@ -155,7 +158,7 @@ def get_simple_photo():
 	return send_file(buffer, as_attachment=True, attachment_filename='singe_image.csv', mimetype="image/csv")
 
 
-if __name__ == 'Server_Package.PiCode.rpiWebServer.API.api':
+if __name__ == 'server_package.api.api':
 	try:
 		app.run(port=1024, host='0.0.0.0')
 	except KeyboardInterrupt:

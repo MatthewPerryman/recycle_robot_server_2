@@ -44,22 +44,22 @@ class ImageStream:
 
 	def get_imgs_for_depth(self, arm_move_function, write_log):
 		# Capture image 1
-		Logging.write_log("server", "First Photo")
+		logging.write_log("server", "First Photo")
 		img1 = self.take_photo()
 
 		# Move the robot right 10mm
-		Logging.write_log("server", "Move Arm 1")
+		logging.write_log("server", "Move Arm 1")
 		arm_move_function(self.m_frame_distance)
 
 		# Capture image 2
-		Logging.write_log("server", "Second Photo")
+		logging.write_log("server", "Second Photo")
 		img2 = self.take_photo()
 
 		# Reset position
-		Logging.write_log("server", "Move Arm 2")
+		logging.write_log("server", "Move Arm 2")
 		arm_move_function(self.m_frame_distance, reverse_vector=True)
 
-		Logging.write_log("server", "Return from image_stream get depth images")
+		logging.write_log("server", "Return from image_stream get depth images")
 		return np.flip(img1), np.flip(img2), self.picam2.capture_metadata()['LensPosition']
 
 	def __init__(self):
