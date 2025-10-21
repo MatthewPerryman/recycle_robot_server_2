@@ -53,12 +53,9 @@ def get_images_for_depth():
 
 	logging.write_log("server", "Reset Location")
 
-
-
-
 	logging.write_log("server", "Call image_stream get depth images")
 	# Take a photo, move the camera 1 cm to the right, take another
-	img1, img2, f_len = image_stream.get_imgs_for_depth(controller.move_by_vector, logging.write_log)
+	img1, img2, f_len = image_stream.get_imgs_for_depth(controller.move_by_vector)
 	print(f"img1: {img1.shape}, img2: {img2.shape}, f_len: {f_len}")
 
 	logging.write_log("server", "Compress Image")

@@ -17,7 +17,8 @@ class ImageStream:
 	# Flipping resolution doesn't work
 	resolution = (640, 480, 3)
 	# second frame 10mm below first frame
-	m_frame_distance = (10, 0, 0)
+	camera_separation_mm = (10, 0, 0)
+	reversed_camera_separation_mm = (-10, 0, 0)
 	
 	# Set the focus mode
 	def set_focus_mode(self, focus_mode, focus_value=None):
@@ -42,14 +43,14 @@ class ImageStream:
 
 		return image
 
-	def get_imgs_for_depth(self, arm_move_function, write_log):
+	def get_imgs_for_depth(self, arm_move_function):
 		# Capture image 1
 		logging.write_log("server", "First Photo")
 		img1 = self.take_photo()
 
 		# Move the robot right 10mm
 		logging.write_log("server", "Move Arm 1")
-		arm_move_function(self.m_frame_distance)
+		arm_move_function(self.camera_separation_mm)
 
 		# Capture image 2
 		logging.write_log("server", "Second Photo")
@@ -57,7 +58,7 @@ class ImageStream:
 
 		# Reset position
 		logging.write_log("server", "Move Arm 2")
-		arm_move_function(self.m_frame_distance, reverse_vector=True)
+		arm_move_function(self.reversed_camera_separation_mm)
 
 		logging.write_log("server", "Return from image_stream get depth images")
 		return np.flip(img1), np.flip(img2), self.picam2.capture_metadata()['LensPosition']
@@ -68,7 +69,6 @@ class ImageStream:
 		self.picam2.configure(preview_config)
 
 		self.picam2.set_controls({"AfMode": controls.AfModeEnum.Manual})
-#		self.picam2.set_controls({"LensPosition": 5.6818181818})
 
 		self.picam2.set_controls({"LensPosition": 10})
 
