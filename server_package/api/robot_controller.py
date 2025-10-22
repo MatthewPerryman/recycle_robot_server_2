@@ -27,16 +27,23 @@ class RobotController:
 
 		new_location = [old[0] + vector[0], old[1] + vector[1], old[2] + vector[2]]
 
-		has_moved = self.move_to(new_location)
+		has_moved = self._move_to(new_location)
+
+		self.end_transmission()
+
+		return has_moved
+	
+	def move_to(self, new_location, speed=100000):
+		self.start_transmission()
+
+		has_moved = self._move_to(new_location, speed)
 
 		self.end_transmission()
 
 		return has_moved
 
 	## Move the robot arm to this vector
-	def move_to(self, new_location, speed=100000):
-		self.start_transmission()
-
+	def _move_to(self, new_location, speed=100000):
 		print("New Location: ", new_location)
 		print(self.swift.check_pos_is_limit(new_location))
 		out_of_bounds = self.swift.check_pos_is_limit(new_location)
@@ -45,48 +52,43 @@ class RobotController:
 		if out_of_bounds is False:
 			# Wait = true to ensure response on move success or failure
 			self.swift.set_position(x=new_location[0], y=new_location[1], z=new_location[2], wait=True, speed=speed)
-
-			self.end_transmission()
-
-			# TODO: Verify this actually moves the robot
-			# #if actual_location[0] == new_location[0] and actual_location[1] == new_location[1] and actual_location[2] == new_location[2]:
-			# # Calculate the angle of the robotic arm and move the wrist by that angle anticlockwise
-			# uarm_angle = self.swift.get_servo_angle(0)
-			# print(f"uarm_angle: {uarm_angle}")
-
-			# # Calculate the difference subtracted from the original angle
-			# angle_diff = uarm_angle-90
-			# print(f"angle_diff: {angle_diff}")
-
-			# # Move the wrist by the difference
-			# self.swift.set_wrist(90+angle_diff, wait=True)
 			has_moved = True
 		else:
 			has_moved = False
 		return has_moved
-
+	
 	def stretch(self, length_mm, speed=100000):
 		self.start_transmission()
+		has_moved = self._stretch(length_mm, speed)
+		self.end_transmission()
+		return has_moved
+
+	def _stretch(self, length_mm, speed=100000):
 		# Get current position
-		current_pos = self.swift.get_position()
-		print("Current Position: ", current_pos)
+		current_polar_pos = self.swift.get_polar()
+		print("Current Position: ", current_polar_pos)
 
 		# Calculate new position
-		new_x = current_pos[0] + length_mm
-		new_location = [new_x, current_pos[1], current_pos[2]]
+		polar_coords = [length_mm, 0, 0]  # stretch, rotation, height
+		new_location = [current_polar_pos[0] + polar_coords[0],
+						current_polar_pos[1] + polar_coords[1],
+						current_polar_pos[2] + polar_coords[2]]
 
 		print("New Location: ", new_location)
 		
-		out_of_bounds = self.swift.check_pos_is_limit(new_location)
+		out_of_bounds = self.swift.check_pos_is_limit(new_location, polar_coords=True)
 		if out_of_bounds is True:
 			print("Stretch out of bounds, aborting")
-			self.end_transmission()
 			return False
 		else:
 			print("New Position: ", new_location)
 
 			# Move to new position
-			has_moved = self.move_to(new_location)
+			self.swift.set_polar(stretch=new_location[0],
+								rotation=new_location[1],
+								height=new_location[2],
+								speed=speed)
+			return True
 
 	# Reset robot location
 	def reset(self, x=200, y=0, z=150):
