@@ -106,7 +106,7 @@ class RobotController:
 		self.swift.flush_cmd(wait_stop=True)
 
 		# Reset the arms location
-		self.swift.reset(x=200, y=0, z=150)
+		self.swift.reset(x=200, y=0, z=150, speed=100000)
 		self.swift.waiting_ready(timeout=3)
 
 		self.end_transmission()

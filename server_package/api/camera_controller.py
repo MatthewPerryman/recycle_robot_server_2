@@ -17,7 +17,7 @@ class ImageStream:
 	# Flipping resolution doesn't work
 	resolution = (640, 480, 3)
 	# second frame 10mm below first frame
-	camera_separation_mm = (10, 0, 0)
+	camera_separation_mm_polar = (10, 0, 0)
 	reversed_camera_separation_mm = (-10, 0, 0)
 	
 	# Set the focus mode
@@ -50,7 +50,7 @@ class ImageStream:
 
 		# Move the robot right 10mm
 		logging.write_log("server", "Move Arm 1")
-		arm_move_function(self.camera_separation_mm)
+		arm_move_function(self.camera_separation_mm_polar)
 
 		# Capture image 2
 		logging.write_log("server", "Second Photo")
