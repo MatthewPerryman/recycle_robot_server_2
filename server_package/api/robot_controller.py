@@ -63,16 +63,15 @@ class RobotController:
 		self.end_transmission()
 		return has_moved
 
-	def _stretch(self, length_mm, speed=100000):
+	def _stretch(self, move_vector_polar, speed=100000):
 		# Get current position
 		current_polar_pos = self.swift.get_polar()
 		print("Current Position: ", current_polar_pos)
 
 		# Calculate new position
-		polar_coords = [length_mm, 0, 0]  # stretch, rotation, height
-		new_location = [current_polar_pos[0] + polar_coords[0],
-						current_polar_pos[1] + polar_coords[1],
-						current_polar_pos[2] + polar_coords[2]]
+		new_location = [current_polar_pos[0] + move_vector_polar[0],
+						current_polar_pos[1] + move_vector_polar[1],
+						current_polar_pos[2] + move_vector_polar[2]]
 
 		print("New Location: ", new_location)
 		
