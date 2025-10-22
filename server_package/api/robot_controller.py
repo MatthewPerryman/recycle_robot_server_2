@@ -75,7 +75,7 @@ class RobotController:
 
 		print("New Location: ", new_location)
 		
-		out_of_bounds = self.swift.check_pos_is_limit(new_location, polar_coords=True)
+		out_of_bounds = self.swift.check_pos_is_limit(new_location, is_polar=True)
 		if out_of_bounds is True:
 			print("Stretch out of bounds, aborting")
 			return False
