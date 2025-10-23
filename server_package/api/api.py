@@ -69,6 +69,8 @@ def get_images_for_depth():
 
 @app.route('/get_image_for_detection', methods=['GET'])
 def get_image_for_detection():
+	image_stream.set_focus_mode("Manual")
+
 	logging.write_log("server", "\nNew Run:\n")
 
 	logging.write_log("server", "Reset Location")
