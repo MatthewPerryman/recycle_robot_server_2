@@ -22,6 +22,8 @@ class ImageStream:
 	
 	# Set the focus mode
 	def set_focus_mode(self, focus_mode, focus_value=None):
+		self.picam2.start()
+		
 		if focus_value is None:
 			focus_value = 5.6818181818  # default middle value
 
