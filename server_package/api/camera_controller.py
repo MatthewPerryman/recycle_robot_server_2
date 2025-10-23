@@ -43,7 +43,8 @@ class ImageStream:
 		if self.picamera2.capture_metadata()['AfMode'] != controls.AfModeEnum.Manual:
 			logging.write_log("server", "Warning: Manual focus mode not set correctly")
 		
-
+		print("Focus Mode Set to ", focus_mode
+			  , " with value ", self.picam2.capture_metadata()['LensPosition'])
 
 	# Get the focus mode
 	def get_focus_mode(self):
