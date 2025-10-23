@@ -59,6 +59,7 @@ class ImageStream:
 		return image
 
 	def get_imgs_for_depth(self, arm_move_function):
+		self.set_focus_mode("Manual")
 		# Capture image 1
 		logging.write_log("server", "First Photo")
 		img1 = self.take_photo()
