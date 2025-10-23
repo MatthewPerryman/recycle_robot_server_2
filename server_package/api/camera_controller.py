@@ -22,27 +22,25 @@ class ImageStream:
 	
 	# Set the focus mode
 	def set_focus_mode(self, focus_mode, focus_value=None):
-		self.picam2.start()
-		
 		if focus_value is None:
 			focus_value = 5.6818181818  # default middle value
 
 		if focus_mode == "Continuous":
 			self.picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 
-			if self.picamera2.capture_metadata()['AfMode'] != controls.AfModeEnum.Continuous:
+			if self.picam2.capture_metadata()['AfMode'] != controls.AfModeEnum.Continuous:
 				logging.write_log("server", "Warning: Continuous focus mode not set correctly")
 		elif focus_mode == "Manual":
 			self.picam2.set_controls({"AfMode": controls.AfModeEnum.Manual})
 			self.picam2.set_controls({"LensPosition": focus_value})
 
-			if self.picamera2.capture_metadata()['AfMode'] != controls.AfModeEnum.Manual:
+			if self.picam2.capture_metadata()['AfMode'] != controls.AfModeEnum.Manual:
 				logging.write_log("server", "Warning: Manual focus mode not set correctly")
 				
-			if self.picamera2.capture_metadata()['LensPosition'] != focus_value:
+			if self.picam2.capture_metadata()['LensPosition'] != focus_value:
 				logging.write_log("server", "Warning: Manual focus value not set correctly")
 		
-		if self.picamera2.capture_metadata()['AfMode'] != controls.AfModeEnum.Manual:
+		if self.picam2.capture_metadata()['AfMode'] != controls.AfModeEnum.Manual:
 			logging.write_log("server", "Warning: Manual focus mode not set correctly")
 		
 		print("Focus Mode Set to ", focus_mode
