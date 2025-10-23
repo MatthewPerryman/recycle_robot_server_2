@@ -30,18 +30,23 @@ class ImageStream:
 
 			if self.picam2.capture_metadata()['AfMode'] != controls.AfModeEnum.Continuous:
 				logging.write_log("server", "Warning: Continuous focus mode not set correctly")
+			else:
+				logging.write_log("server", "Focus mode set to Continuous")
 		elif focus_mode == "Manual":
 			self.picam2.set_controls({"AfMode": controls.AfModeEnum.Manual})
 			self.picam2.set_controls({"LensPosition": focus_value})
 
 			if self.picam2.capture_metadata()['AfMode'] != controls.AfModeEnum.Manual:
 				logging.write_log("server", "Warning: Manual focus mode not set correctly")
+			else:
+				logging.write_log("server", "Focus mode set to Manual")
 				
 			if self.picam2.capture_metadata()['LensPosition'] != focus_value:
 				logging.write_log("server", "Warning: Manual focus value not set correctly")
-		
-		if self.picam2.capture_metadata()['AfMode'] != controls.AfModeEnum.Manual:
-			logging.write_log("server", "Warning: Manual focus mode not set correctly")
+			else:
+				logging.write_log("server", f"Focus value set to {focus_value}")
+		else:
+			logging.write_log("server", "Warning: Focus mode not recognized")
 		
 		print("Focus Mode Set to ", focus_mode
 			  , " with value ", self.picam2.capture_metadata()['LensPosition'])
@@ -60,6 +65,7 @@ class ImageStream:
 
 	def get_imgs_for_depth(self, arm_move_function):
 		self.set_focus_mode("Manual")
+
 		# Capture image 1
 		logging.write_log("server", "First Photo")
 		img1 = self.take_photo()
