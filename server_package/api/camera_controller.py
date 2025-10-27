@@ -30,7 +30,10 @@ class ImageStream:
 
 		print(self.picam2.capture_metadata())
 		logging.write_log("server", self.picam2.capture_metadata())
-		
+
+		print(self.picam2.camera_controls)
+		logging.write_log("server", self.picam2.camera_controls)
+
 		if focus_mode == "Continuous":
 			self.picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 
