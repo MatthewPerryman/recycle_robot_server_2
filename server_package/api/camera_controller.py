@@ -28,6 +28,9 @@ class ImageStream:
 		if focus_value is None:
 			focus_value = 5.6818181818  # default middle value
 
+		print(self.picam2.capture_metadata())
+		logging.write_log("server", self.picam2.capture_metadata())
+		
 		if focus_mode == "Continuous":
 			self.picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 
