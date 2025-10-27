@@ -28,9 +28,6 @@ class ImageStream:
 		if focus_value is None:
 			focus_value = 5.6818181818  # default middle value
 
-		print(self.picam2.capture_metadata())
-		logging.write_log("server", self.picam2.capture_metadata())
-
 		print(self.picam2.camera_controls)
 		logging.write_log("server", self.picam2.camera_controls)
 
@@ -58,7 +55,7 @@ class ImageStream:
 			logging.write_log("server", "Warning: Focus mode not recognized")
 		
 		print("Focus Mode Set to ", focus_mode
-			  , " with value ", self.picam2.camera_controls()['LensPosition'])
+			  , " with value ", self.picam2.camera_controls['LensPosition'])
 
 	# Get the focus mode
 	def get_focus_mode(self):
