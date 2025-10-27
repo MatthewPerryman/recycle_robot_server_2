@@ -37,7 +37,7 @@ class ImageStream:
 		if focus_mode == "Continuous":
 			self.picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 
-			if self.picam2.camera_controls()['AfMode'] != controls.AfModeEnum.Continuous:
+			if self.picam2.camera_controls['AfMode'] != controls.AfModeEnum.Continuous:
 				logging.write_log("server", "Warning: Continuous focus mode not set correctly")
 			else:
 				logging.write_log("server", "Focus mode set to Continuous")
@@ -45,12 +45,12 @@ class ImageStream:
 			self.picam2.set_controls({"AfMode": controls.AfModeEnum.Manual})
 			self.picam2.set_controls({"LensPosition": focus_value})
 
-			if self.picam2.camera_controls()['AfMode'] != controls.AfModeEnum.Manual:
+			if self.picam2.camera_controls['AfMode'] != controls.AfModeEnum.Manual:
 				logging.write_log("server", "Warning: Manual focus mode not set correctly")
 			else:
 				logging.write_log("server", "Focus mode set to Manual")
 				
-			if self.picam2.camera_controls()['LensPosition'] != focus_value:
+			if self.picam2.camera_controls['LensPosition'] != focus_value:
 				logging.write_log("server", "Warning: Manual focus value not set correctly")
 			else:
 				logging.write_log("server", f"Focus value set to {focus_value}")
