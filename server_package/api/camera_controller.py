@@ -28,9 +28,6 @@ class ImageStream:
 		if focus_value is None:
 			focus_value = 5.6818181818  # default middle value
 
-		print(self.picam2.camera_controls)
-		logging.write_log("server", self.picam2.camera_controls)
-
 		if focus_mode == "Continuous":
 			self.picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
 
@@ -56,6 +53,8 @@ class ImageStream:
 		
 		print("Focus Mode Set to ", focus_mode
 			  , " with value ", self.picam2.camera_controls['LensPosition'])
+		
+		sleep(2)
 
 	# Get the focus mode
 	def get_focus_mode(self):
