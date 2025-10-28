@@ -86,7 +86,7 @@ class RobotController:
 			self.swift.set_polar(stretch=new_location[0],
 								rotation=new_location[1],
 								height=new_location[2],
-								speed=speed)
+								speed=10)
 			return True
 
 	# Reset robot location
