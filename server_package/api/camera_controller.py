@@ -17,8 +17,8 @@ class ImageStream:
 	# Flipping resolution doesn't work
 	resolution = (640, 480, 3)
 	# second frame 10mm below first frame
-	camera_separation_mm_polar = (50, 0, 0)
-	reversed_camera_separation_mm = (-50, 0, 0)
+	camera_separation_mm_polar = (10, 0, 0)
+	reversed_camera_separation_mm = (-10, 0, 0)
 	
 	# Set the focus mode
 	def set_focus_mode(self, focus_mode, focus_value=None):
