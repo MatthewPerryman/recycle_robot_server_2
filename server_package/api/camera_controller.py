@@ -29,7 +29,8 @@ class ImageStream:
 			focus_value = 5.6818181818  # default middle value
 
 		if focus_mode == "Continuous":
-			self.picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
+			self.picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous, "ExposureTime": 10000, "AnalogueGain": 1.0})
+			
 
 			if self.picam2.camera_controls['AfMode'] != controls.AfModeEnum.Continuous:
 				logging.write_log("server", "Warning: Continuous focus mode not set correctly")
