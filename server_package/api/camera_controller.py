@@ -22,6 +22,15 @@ class ImageStream:
 		# second frame 10mm below first frame
 		self.m_frame_distance = (10, 0, 0)
 	
+		# open camera
+		preview_config = self.picam2.create_still_configuration(main={"size": (640, 480)})
+		self.picam2.configure(preview_config)
+
+		self.picam2.set_controls({"AfMode": controls.AfModeEnum.Manual})
+#		self.picam2.set_controls({"LensPosition": 5.6818181818})
+
+		self.picam2.set_controls({"LensPosition": 10})
+
 	# Set the focus mode
 	def set_focus_mode(self, focus_mode, focus_value=None):
 		if focus_mode == "Continuous":
@@ -64,16 +73,6 @@ class ImageStream:
 
 		logging.write_log("server", "Return from image_stream get depth images")
 		return np.flip(img1), np.flip(img2)
-
-	def __init__(self):
-		# open camera
-		preview_config = self.picam2.create_still_configuration(main={"size": (640, 480)})
-		self.picam2.configure(preview_config)
-
-		self.picam2.set_controls({"AfMode": controls.AfModeEnum.Manual})
-#		self.picam2.set_controls({"LensPosition": 5.6818181818})
-
-		self.picam2.set_controls({"LensPosition": 10})
 
 	def __del__(self):
 		self.picam2.close()

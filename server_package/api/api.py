@@ -11,7 +11,7 @@ import time
 app = Flask(__name__)
 
 # The camera is focussed here, therefore set up lighting before starting the app
-controller = RobotController.RobotController()
+controller = RobotController()
 image_stream = ImageStream(controller)  # Pass the shared controller instance
 
 # API Control of Robot Arm
@@ -154,7 +154,7 @@ def get_simple_photo():
 	return send_file(buffer, as_attachment=True, attachment_filename='singe_image.csv', mimetype="image/csv")
 
 
-if __name__ == 'Server_Package.PiCode.rpiWebServer.API.api':
+if __name__ == 'server_package.api.api':
 	try:
 		app.run(port=1024, host='0.0.0.0')
 	except KeyboardInterrupt:

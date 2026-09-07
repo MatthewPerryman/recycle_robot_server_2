@@ -1,0 +1,24 @@
+# recycle_robot_server_2 - runtime dependencies (Raspberry Pi, Debian 13, Python 3.13)
+#
+# IMPORTANT: picamera2 and libcamera are NOT pip-installable on a Raspberry Pi.
+# They are built against the system libcamera stack and ship via apt. The venv
+# must therefore be able to see system site-packages:
+#
+#   sudo apt install -y python3-picamera2 python3-libcamera python3-numpy python3-flask python3-serial
+#   python3 -m venv --system-site-packages .venv
+#
+# An existing venv can be opened up by editing its pyvenv.cfg:
+#   include-system-site-packages = true
+#
+# Then install the pip-only dependency below:
+#   .venv/bin/pip install -r requirements.txt
+
+# --- pip-installable ---
+uArm-Python-SDK==2.0.7
+
+# --- provided by apt, listed for reference (do NOT pip install these) ---
+# python3-flask      3.1.1     flask
+# python3-numpy      2.2.4     numpy
+# python3-picamera2  0.3.31    picamera2
+# python3-libcamera  0.5.2     libcamera
+# python3-serial     3.5       pyserial  (pulled in by uArm-Python-SDK)
