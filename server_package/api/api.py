@@ -43,6 +43,21 @@ def reset_robot():
 	controller.reset(x=200, y=0, z=150)
 	return 0
 
+@app.route('/get_photo', methods=['GET'])
+def get_photo():
+	image_stream.set_focus_mode("Continuous")
+	# wait for camera to settle
+	time.sleep(2)
+
+	image = image_stream.take_photo()
+	logging.write_log("server", "Compress Image")
+
+	buffer = io.BytesIO()
+	np.savez_compressed(buffer, image)
+	buffer.seek(0)
+
+	logging.write_log("server", "Send Image")
+	return send_file(buffer, as_attachment=True, download_name='depth_imgs.csv')
 
 # Compact command get information for screw localising
 @app.route('/get_images_for_depth', methods=['GET'])
@@ -54,33 +69,12 @@ def get_images_for_depth():
 
 	logging.write_log("server", "Call image_stream get depth images")
 	# Take a photo, move the camera 1 cm to the right, take another
-	img1, img2 = image_stream.get_imgs_for_depth(logging.write_log)
-	print(f"img1: {img1.shape}, img2: {img2.shape}, f_len: {f_len}")
+	left_frame, right_frame = image_stream.get_imgs_for_depth(logging.write_log)
+	print(f"left: {left_frame.shape}, right: {right_frame.shape}, f_len: {image_stream.lens_position}")
 
 	logging.write_log("server", "Compress Image")
 	buffer = io.BytesIO()
-	np.savez_compressed(buffer, img1, img2)
-	buffer.seek(0)
-
-	logging.write_log("server", "Send Images")
-	print(buffer)
-	return send_file(buffer, as_attachment=True, download_name='depth_imgs.csv')
-
-@app.route('/get_image_for_detection', methods=['GET'])
-def get_image_for_detection():
-	logging.write_log("server", "\nNew Run:\n")
-
-	logging.write_log("server", "Reset Location")
-	reset_robot()
-
-	logging.write_log("server", "Call image_stream get image of laptop")
-	# Take a photo, move the camera 1 cm to the right, take another
-	img1 = image_stream.take_photo()
-	print(f"img1: {img1.shape}")
-
-	logging.write_log("server", "Compress Image")
-	buffer = io.BytesIO()
-	np.savez_compressed(buffer, img1)
+	np.savez_compressed(buffer, left_frame, right_frame)
 	buffer.seek(0)
 
 	logging.write_log("server", "Send Images")
@@ -111,23 +105,6 @@ def get_wrist_angle():
 	angle = controller.swift.get_servo_angle(0)
 	return jsonify({"angle": angle})
 
-
-@app.route('/take_photo', methods=['GET'])
-def take_photo():
-	image_stream.set_focus_mode("Continuous")
-	# wait for camera to settle
-	time.sleep(2)
-
-	image = image_stream.take_photo()
-	logging.write_log("server", "Compress Image")
-
-	buffer = io.BytesIO()
-	np.savez_compressed(buffer, image)
-	buffer.seek(0)
-
-	logging.write_log("server", "Send Image")
-	return send_file(buffer, as_attachment=True, download_name='depth_imgs.csv')
-
 @app.route('/set_focus_mode', methods=['POST'])
 def	set_focus_mode():
 	json_data = json.loads(request.data)
@@ -138,21 +115,6 @@ def	set_focus_mode():
 		image_stream.set_focus_mode("Manual")
 
 	return f"Focus Mode Set to {focus_mode}"
-
-
-@app.route('/get_simple_photo', methods=['GET'])
-def get_simple_photo():
-	image = image_stream.take_photo()
-	logging.write_log("server", "Compress Image")
-
-	print(image.shape)
-	buffer = io.BytesIO()
-	np.savez_compressed(buffer, image)
-	buffer.seek(0)
-
-	logging.write_log("server", "Send Image")
-	return send_file(buffer, as_attachment=True, attachment_filename='singe_image.csv', mimetype="image/csv")
-
 
 if __name__ == 'Server_Package.PiCode.rpiWebServer.API.api':
 	try:
