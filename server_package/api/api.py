@@ -152,12 +152,3 @@ def get_simple_photo():
 
 	logging.write_log("server", "Send Image")
 	return send_file(buffer, as_attachment=True, attachment_filename='singe_image.csv', mimetype="image/csv")
-
-
-if __name__ == 'server_package.api.api':
-	try:
-		app.run(port=1024, host='0.0.0.0')
-	except KeyboardInterrupt:
-		image_stream.__del__
-		controller.__del__
-		exit()

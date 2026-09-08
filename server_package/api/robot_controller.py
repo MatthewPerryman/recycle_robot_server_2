@@ -83,6 +83,16 @@ class RobotController:
 
 		self.end_transmission()
 
+	## Flush queued commands and release the serial connection.
+	## Safe to call more than once.
+	def close(self):
+		if getattr(self, "swift", None) is None:
+			return
+		try:
+			self.swift.flush_cmd(wait_stop=True)
+			self.swift.disconnect()
+		finally:
+			self.swift = None
+
 	def __del__(self):
-		self.swift.flush_cmd(wait_stop=True)
-		self.swift.disconnect()
+		self.close()

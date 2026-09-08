@@ -74,5 +74,15 @@ class ImageStream:
 		logging.write_log("server", "Return from image_stream get depth images")
 		return np.flip(img1), np.flip(img2)
 
+	## Release the camera. Safe to call more than once.
+	def close(self):
+		picam2 = getattr(self, "picam2", None)
+		if picam2 is None:
+			return
+		try:
+			picam2.close()
+		finally:
+			self.picam2 = None
+
 	def __del__(self):
-		self.picam2.close()
+		self.close()
