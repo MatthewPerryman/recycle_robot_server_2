@@ -83,6 +83,111 @@ class RobotController:
 
 		self.end_transmission()
 
+	## --- teach mode: stream position, record it on each button press ---
+	##
+	## Position is captured INSIDE the key callback from a continuously
+	## streamed cache, so the recorded point is the one at the instant the
+	## button was pressed. Calling get_position() synchronously from a
+	## report callback would block the SDK's own receive thread.
+	def start_teach_capture(self, interval=0.1):
+		import threading
+		self._teach_lock = threading.Lock()
+		self._latest_pos = None
+		self._key_events = []
+
+		def on_pos(pos):
+			try:
+				self._latest_pos = [float(v) for v in pos[:3]]
+			except Exception:
+				pass
+
+		def make_key_cb(button):
+			def cb(status):
+				import time
+				with self._teach_lock:
+					self._key_events.append({
+						'button': button,
+						'status': str(status),
+						'position': self._latest_pos,
+						't': time.time(),
+					})
+			return cb
+
+		self.swift.set_report_position(interval)
+		self.swift.register_report_position_callback(on_pos)
+		self.swift.set_report_keys(True)
+		self.swift.register_key0_callback(make_key_cb(0))
+		self.swift.register_key1_callback(make_key_cb(1))
+		return True
+
+	def stop_teach_capture(self):
+		try:
+			self.swift.release_key0_callback()
+			self.swift.release_key1_callback()
+			self.swift.release_report_position_callback()
+			self.swift.set_report_keys(False)
+			self.swift.set_report_position(0)
+		except Exception:
+			pass
+		return True
+
+	## Return buffered button presses and clear the buffer.
+	def drain_key_events(self):
+		lock = getattr(self, '_teach_lock', None)
+		if lock is None:
+			return []
+		with lock:
+			events = list(self._key_events)
+			self._key_events = []
+		return events
+
+	def latest_position(self):
+		return getattr(self, '_latest_pos', None)
+
+	## Mode decides where the TOOL CENTRE POINT sits (manual p.7):
+	##   0 general/suction, 1 laser, 2 3D print, 3 pen/gripper
+	## Our printed pointer is none of these, so the TCP sits wherever the
+	## current mode puts it. That is why the TCP-to-tip offset is unknown
+	## and has to be measured rather than read off the CAD.
+	def device_info(self):
+		info = {}
+		try:
+			info["mode"] = self.swift.get_mode()
+		except Exception as e:
+			info["mode"] = "error: %s" % e
+		for k in ("device_type", "hardware_version", "firmware_version", "api_version"):
+			try:
+				info[k] = getattr(self.swift, k, None)
+			except Exception:
+				info[k] = None
+		try:
+			info["position"] = self.swift.get_position()
+			info["servo_angles"] = [self.swift.get_servo_angle(i) for i in range(3)]
+		except Exception as e:
+			info["angles_err"] = str(e)
+		return info
+
+	## Release the servos so the arm can be moved by hand, or re-lock them.
+	##
+	## WARNING: detaching drops all holding torque. The arm WILL sag under
+	## its own weight and whatever is mounted on it. Support it by hand
+	## before enabling, and lower it somewhere safe first.
+	def set_free_move(self, enable):
+		self.start_transmission()
+		if enable:
+			res = self.swift.set_servo_detach()
+		else:
+			res = self.swift.set_servo_attach()
+		self.end_transmission()
+		return res
+
+	## True if every servo reports attached (i.e. NOT in free-move).
+	def is_attached(self):
+		try:
+			return [bool(self.swift.get_servo_attach(servo_id=i)) for i in range(3)]
+		except Exception:
+			return None
+
 	## Flush queued commands and release the serial connection.
 	## Safe to call more than once.
 	def close(self):
