@@ -99,6 +99,50 @@ def set_position():
 	return jsonify(response=response)
 
 
+# Start/stop streaming position and reporting base-button presses.
+# POST {"enable": true} before a teach session.
+@app.route('/teach_capture/', methods=['POST'])
+def teach_capture():
+	enable = bool(json.loads(request.data).get('enable', False))
+	if enable:
+		controller.start_teach_capture()
+	else:
+		controller.stop_teach_capture()
+	logging.write_log("server", "teach_capture enable=%s" % enable)
+	return jsonify(teach_capture=enable)
+
+
+# Drain buffered button presses. Each carries the arm position AT THE
+# MOMENT the button was pressed, not when this was polled.
+# status '1' = short press, '2' = long press. button 0 or 1.
+@app.route('/key_events/', methods=['GET'])
+def key_events():
+	return jsonify(events=controller.drain_key_events(),
+	               latest_position=controller.latest_position())
+
+# Release or re-lock the servos so the arm can be positioned by hand.
+# POST {"enable": true} to free it, {"enable": false} to lock it.
+#
+# WARNING: freeing the arm removes ALL holding torque - it will sag under
+# the weight of the mount and camera. Support it before calling this.
+@app.route('/free_move/', methods=['POST'])
+def free_move():
+	enable = bool(json.loads(request.data).get('enable', False))
+	result = controller.set_free_move(enable)
+	logging.write_log("server", "free_move enable=%s -> %s" % (enable, result))
+	return jsonify(free_move=enable, response=str(result))
+
+
+# Which servos are currently attached (locked)?
+@app.route('/servo_state/', methods=['GET'])
+def servo_state():
+	return jsonify(attached=controller.is_attached())
+
+# Arm mode, versions and joint angles. Mode decides where the TCP is.
+@app.route('/device_info/', methods=['GET'])
+def device_info():
+	return jsonify(controller.device_info())
+
 # Retrieve robot position
 @app.route('/get_position/', methods=['GET'])
 def get_position():
