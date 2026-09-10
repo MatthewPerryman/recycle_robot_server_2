@@ -61,6 +61,45 @@ class RobotController:
 			has_moved = False
 		return has_moved
 
+	## Move through every point in ONE continuous motion.
+	##
+	## The difference from calling move_to per point is the wait. Each point
+	## is queued with wait=False, so the firmware's planner has the whole path
+	## in hand and blends between segments instead of decelerating to a stop
+	## at every one of them. A single flush at the end waits for the lot.
+	##
+	## Points are ABSOLUTE, in the same frame as move_to.
+	def move_path(self, points, speed=100000):
+		self.start_transmission()
+
+		# Every point is bounds-checked BEFORE anything moves, so a bad point
+		# late in the path cannot leave the arm stranded halfway along it.
+		# check_pos_is_limit returns True when OUT of bounds - see move_to.
+		for p in points:
+			if self.swift.check_pos_is_limit(list(p)) is not False:
+				print("move_path: out of bounds at ", p)
+				self.end_transmission()
+				return False
+
+		print("Path: ", points)
+
+		for p in points:
+			self.swift.set_position(x=p[0], y=p[1], z=p[2],
+			                        wait=False, speed=speed)
+
+		# Waits for the whole queued path, not just the last command.
+		self.swift.flush_cmd(wait_stop=True)
+
+		# Wrist correction once, at the landing point. The intermediate points
+		# are travel, and a wait=True wrist move between them would break the
+		# blend that is the whole reason this method exists.
+		uarm_angle = self.swift.get_servo_angle(0)
+		angle_diff = uarm_angle - 90
+		self.swift.set_wrist(90 + angle_diff, wait=True)
+
+		self.end_transmission()
+		return True
+
 	# Reset robot location
 	def reset(self, x=200, y=0, z=150):
 		self.start_transmission()

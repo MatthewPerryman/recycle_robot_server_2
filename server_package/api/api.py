@@ -37,6 +37,18 @@ def move_by_vector():
 	return jsonify(response=has_moved)
 
 
+# Move through a list of ABSOLUTE positions as one continuous motion, without
+# stopping at the intermediate ones. POST {"points": [{"Xd":..,"Yd":..,"Zd":..}]}
+@app.route('/move_path/', methods=['POST'])
+def move_path():
+	points = json.loads(request.data)['points']
+
+	response = controller.move_path(
+		[[p['Xd'], p['Yd'], p['Zd']] for p in points])
+
+	return jsonify(response=response)
+
+
 # Method to reset robot location
 @app.route('/reset_robot', methods=['POST'])
 def reset_robot():
