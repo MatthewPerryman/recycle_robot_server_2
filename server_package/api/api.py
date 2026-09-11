@@ -49,6 +49,16 @@ def move_path():
 	return jsonify(response=response)
 
 
+# Is a position reachable? Returns {"reachable": bool} and MOVES NOTHING, so
+# the envelope can be mapped safely. POST {"Xd":..,"Yd":..,"Zd":..}
+@app.route('/check_position/', methods=['POST'])
+def check_position():
+	json_coord = json.loads(request.data)
+	location = [json_coord['Xd'], json_coord['Yd'], json_coord['Zd']]
+
+	return jsonify(reachable=controller.check_position(location))
+
+
 # Method to reset robot location
 @app.route('/reset_robot', methods=['POST'])
 def reset_robot():

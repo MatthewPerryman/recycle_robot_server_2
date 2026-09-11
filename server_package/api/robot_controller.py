@@ -100,6 +100,17 @@ class RobotController:
 		self.end_transmission()
 		return True
 
+	## Is this position inside the arm's envelope? MOVES NOTHING.
+	##
+	## check_pos_is_limit returns True when the target is OUT of range, which
+	## reads backwards - move_to tests it with "is False". This flips it so
+	## callers get the obvious answer: True means reachable.
+	##
+	## Read-only, so the envelope can be mapped by probing rather than by
+	## driving the arm at its own limits to find out where they are.
+	def check_position(self, location):
+		return self.swift.check_pos_is_limit(list(location)) is False
+
 	# Reset robot location
 	def reset(self, x=200, y=0, z=150):
 		self.start_transmission()
