@@ -156,6 +156,14 @@ class RotateByDegreesTest(unittest.TestCase):
 		self.assertEqual(servo.speeds_written[-1], 0)
 		self.assertTrue(result["samples"])
 
+	def test_samples_carry_the_motor_current(self):
+		result = make_controller(FakeServo()).rotate_by_degrees(45)
+		self.assertEqual(result["sample_columns"],
+		                 ["seconds", "degrees_turned", "load_percent", "current_raw"])
+		self.assertTrue(all(len(sample) == 4 for sample in result["samples"]))
+		self.assertEqual(result["samples"][0][3], 12)      # FakeServo's PRESENT_CURRENT
+		self.assertEqual(result["peak_current_raw"], 12)
+
 	def test_anticlockwise_drives_the_servo_backwards(self):
 		servo = FakeServo()
 		result = make_controller(servo).rotate_by_degrees(-90)

@@ -16,7 +16,7 @@ it once by eye with a small clockwise rotation.
 THE LOAD TRACE
 
 rotate_by_degrees returns, as well as how far it turned, a sample every
-~10 ms of the angle turned and the load. That is the measurement for
+~10 ms of the angle turned, the load and the motor current. That is the measurement for
 "is the screw's resistance rising, levelling off or falling": a seized
 screw climbs to the load limit, one that has broken free drops to a low
 plateau. The load is the servo's own reading, in % of its maximum torque.
@@ -61,7 +61,10 @@ PRESENT_SPEED       = 58        # 2 bytes, steps per second, sign in bit 15
 PRESENT_LOAD        = 60        # 2 bytes, tenths of a % of max torque, sign in bit 10
 PRESENT_VOLTAGE     = 62        # 1 byte, tenths of a volt
 PRESENT_TEMPERATURE = 63        # 1 byte, degrees C
-PRESENT_CURRENT     = 69        # 2 bytes, ~6.5 mA per unit - address and scale UNVERIFIED
+# 2 bytes, ~6.5 mA per unit - scale UNVERIFIED. The address looks right: 0 at
+# rest, and spinning in the air 0.4 / 0.7 / 2.2 / 3.4 at 5 / 10 / 20 / 30 rpm
+# (2026-10-07). Not yet tried against a screw that resists.
+PRESENT_CURRENT     = 69
 
 # Settings (written by us)
 MODE          = 33              # 1 byte: 0 = position, 1 = wheel (continuous)
@@ -275,8 +278,9 @@ class ScrewDriverController:
 		previous_position = self._read_2_bytes(PRESENT_POSITION, "start position")
 		servo_steps = 0                     # signed, in the servo's own direction;
 		                                    # x servo_direction = progress the requested way
-		samples = []                        # [seconds, degrees turned, load %]
+		samples = []                        # [seconds, degrees turned, load %, current (raw)]
 		peak_load_percent = 0.0
+		peak_current_raw = 0
 		stopped_because = "reached the angle"
 		started = time.monotonic()
 		try:
@@ -291,9 +295,15 @@ class ScrewDriverController:
 				previous_position = current_position
 				degrees_turned = servo_steps * servo_direction * DEGREES_PER_STEP
 				load_percent = self._read_load_percent()
+				# Recorded, not acted on: see PRESENT_CURRENT. Spinning in the air
+				# it read 0-5 against load's 4-25% (2026-10-07), so it may show the
+				# screw's resistance without the speed effect that load carries.
+				current_raw = self._read_2_bytes(PRESENT_CURRENT, "current")
 				elapsed_seconds = time.monotonic() - started
-				samples.append([round(elapsed_seconds, 3), round(degrees_turned, 1), load_percent])
+				samples.append([round(elapsed_seconds, 3), round(degrees_turned, 1), load_percent,
+				                current_raw])
 				peak_load_percent = max(peak_load_percent, abs(load_percent))
+				peak_current_raw = max(peak_current_raw, current_raw)
 				if target_degrees is not None and degrees_turned >= target_degrees:
 					break
 				extra_load_percent = abs(load_percent) - free_spin_load_percent
@@ -321,8 +331,9 @@ class ScrewDriverController:
 			"stopped_because": stopped_because,
 			"peak_load_percent": peak_load_percent,
 			"free_spin_load_percent": round(free_spin_load_percent, 1),   # subtracted for the limits
+			"peak_current_raw": peak_current_raw,
 			"seconds": round(time.monotonic() - started, 2),
-			"sample_columns": ["seconds", "degrees_turned", "load_percent"],
+			"sample_columns": ["seconds", "degrees_turned", "load_percent", "current_raw"],
 			"samples": samples,
 		}
 
