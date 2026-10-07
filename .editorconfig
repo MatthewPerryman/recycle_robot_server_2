@@ -1,0 +1,6 @@
+# Editors that read this (VS Code with the EditorConfig extension, most
+# others): this repo indents Python with tabs, as it always has.
+root = true
+
+[*.py]
+indent_style = tab

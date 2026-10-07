@@ -4,7 +4,10 @@ from flask import Flask, request, send_file, jsonify
 from utils import logging
 from .camera_controller import ImageStream
 from .robot_controller import RobotController
+from .screw_driver_controller import (ScrewDriverConfig, ScrewDriverController,
+                                      ScrewDriverError)
 import io
+import os
 import numpy as np
 import time
 
@@ -13,6 +16,32 @@ app = Flask(__name__)
 # The camera is focussed here, therefore set up lighting before starting the app
 controller = RobotController()
 image_stream = ImageStream(controller)  # Pass the shared controller instance
+
+# The screwdriver is optional: if its board is unplugged or its config is
+# wrong, the server still starts and its endpoints say why. POST
+# /screw_driver/connect/ after fixing it - no restart, so the arm stays put.
+SCREW_DRIVER_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                        "..", "..", "screw_driver_config.json")
+screw_driver = None
+screw_driver_problem = "not connected yet"
+
+
+def connect_screw_driver():
+	global screw_driver, screw_driver_problem
+	if screw_driver is not None:
+		screw_driver.close()
+		screw_driver = None
+	try:
+		config = ScrewDriverConfig.from_json_file(SCREW_DRIVER_CONFIG_PATH)
+		screw_driver = ScrewDriverController(config)
+		screw_driver_problem = None
+	except (OSError, ValueError, TypeError, ScrewDriverError) as exc:
+		screw_driver_problem = "%s: %s" % (type(exc).__name__, exc)
+	logging.write_log("server", "screw driver: %s" % (screw_driver_problem or "connected"))
+	return screw_driver_problem
+
+
+connect_screw_driver()
 
 # API Control of Robot Arm
 @app.route('/update_position', methods=['POST'])
@@ -218,3 +247,71 @@ def get_simple_photo():
 
 	logging.write_log("server", "Send Image")
 	return send_file(buffer, as_attachment=True, attachment_filename='singe_image.csv', mimetype="image/csv")
+
+
+# --- Screwdriver ----------------------------------------------------------
+# Directions are as seen looking down the bit at the screw head: clockwise
+# tightens, anticlockwise loosens. See screw_driver_controller.py.
+
+def screw_driver_unavailable():
+	return jsonify(error="screw driver not connected: %s" % screw_driver_problem), 503
+
+
+# The board stopped answering mid-command (cable out, power off): say so
+# clearly instead of a bare 500. /screw_driver/connect/ once it is back.
+@app.errorhandler(ScrewDriverError)
+def screw_driver_lost(exc):
+	return jsonify(error="screw driver stopped answering: %s" % exc), 503
+
+
+@app.route('/screw_driver/connect/', methods=['POST'])
+def screw_driver_connect():
+	problem = connect_screw_driver()
+	return jsonify(connected=problem is None, problem=problem)
+
+
+@app.route('/screw_driver/status/', methods=['GET'])
+def screw_driver_status():
+	if screw_driver is None:
+		return screw_driver_unavailable()
+	return jsonify(screw_driver.status())
+
+
+# POST {"degrees": -720, "speed_rpm": 10}  (speed_rpm optional)
+# Positive = clockwise. Waits until the rotation ends, then returns what
+# happened, including the load-against-angle samples.
+@app.route('/screw_driver/rotate_by_degrees/', methods=['POST'])
+def screw_driver_rotate_by_degrees():
+	if screw_driver is None:
+		return screw_driver_unavailable()
+	request_body = json.loads(request.data)
+	try:
+		result = screw_driver.rotate_by_degrees(float(request_body['degrees']),
+		                                        request_body.get('speed_rpm'))
+	except ValueError as exc:
+		return jsonify(error=str(exc)), 400
+	return jsonify(result)
+
+
+# POST {"direction": "anticlockwise", "speed_rpm": 10, "max_seconds": 5}
+# Starts turning and returns straight away. It stops on /screw_driver/stop/,
+# at the load limit, or after max_seconds - whichever comes first.
+@app.route('/screw_driver/rotate/', methods=['POST'])
+def screw_driver_rotate():
+	if screw_driver is None:
+		return screw_driver_unavailable()
+	request_body = json.loads(request.data)
+	try:
+		result = screw_driver.rotate(request_body['direction'],
+		                             request_body.get('speed_rpm'),
+		                             request_body.get('max_seconds'))
+	except ValueError as exc:
+		return jsonify(error=str(exc)), 400
+	return jsonify(result)
+
+
+@app.route('/screw_driver/stop/', methods=['POST'])
+def screw_driver_stop():
+	if screw_driver is None:
+		return screw_driver_unavailable()
+	return jsonify(last_rotation=screw_driver.stop())

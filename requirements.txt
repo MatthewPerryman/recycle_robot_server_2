@@ -15,6 +15,7 @@
 
 # --- pip-installable ---
 uArm-Python-SDK==2.0.7
+feetech-servo-sdk==1.0.0   # the screwdriver servo (scservo_sdk)
 
 # --- provided by apt, listed for reference (do NOT pip install these) ---
 # python3-flask      3.1.1     flask

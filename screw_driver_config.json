@@ -1,0 +1,12 @@
+{
+    "port": "/dev/serial/by-id/REPLACE-WITH-THE-SERVO-BOARD",
+    "servo_id": 1,
+    "baud_rate": 1000000,
+    "clockwise_is_positive_speed": true,
+    "default_speed_rpm": 10,
+    "max_speed_rpm": 40,
+    "acceleration": 50,
+    "torque_limit_percent": 30,
+    "load_limit_percent": 25,
+    "max_rotation_seconds": 15
+}
