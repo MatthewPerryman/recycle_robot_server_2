@@ -1,8 +1,8 @@
 {
-    "port": "/dev/serial/by-id/REPLACE-WITH-THE-SERVO-BOARD",
+    "port": "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B8E114492-if00",
     "servo_id": 1,
     "baud_rate": 1000000,
-    "clockwise_is_positive_speed": true,
+    "clockwise_is_positive_speed": false,
     "default_speed_rpm": 10,
     "max_speed_rpm": 40,
     "acceleration": 50,
