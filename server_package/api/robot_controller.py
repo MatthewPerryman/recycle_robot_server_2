@@ -1,5 +1,9 @@
 from uarm.wrapper import SwiftAPI
 
+# The uArm's USB ID (its Arduino Mega 2560). Without this filter SwiftAPI takes
+# the first USB serial port it finds, which can be the screwdriver's servo board.
+UARM_USB_FILTER = {'hwid': 'USB VID:PID=2341:0042'}
+
 
 class RobotController:
 	swift = None
@@ -122,7 +126,7 @@ class RobotController:
 	## Create the API context and put robot on standby
 	def __init__(self):
 		if self.swift == None:
-			self.swift = SwiftAPI()
+			self.swift = SwiftAPI(filters=UARM_USB_FILTER)
 			self.swift.waiting_ready(timeout=3)
 
 		self.swift.flush_cmd(wait_stop=True)
