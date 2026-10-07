@@ -182,6 +182,19 @@ class RotateByDegreesTest(unittest.TestCase):
 		self.assertLess(result["degrees_turned"], 60)
 		self.assertGreaterEqual(result["peak_load_percent"], 28.0)
 
+	def test_stops_early_at_a_given_load_threshold(self):
+		servo = FakeServo(load_for_degrees=lambda degrees: 15.0 if degrees > 30 else 5.0)
+		result = make_controller(servo).rotate_by_degrees(-720, stop_above_load_percent=12)
+		self.assertEqual(result["stopped_because"], "load threshold")
+		self.assertLess(result["degrees_turned"], 60)
+		self.assertEqual(servo.speeds_written[-1], 0)
+
+	def test_load_threshold_must_be_below_the_load_limit(self):
+		controller = make_controller(FakeServo())
+		for threshold in (0, 25, 40):
+			with self.assertRaises(ValueError):
+				controller.rotate_by_degrees(90, stop_above_load_percent=threshold)
+
 	def test_times_out(self):
 		servo = FakeServo()
 		result = make_controller(servo, max_rotation_seconds=0.3).rotate_by_degrees(36000)

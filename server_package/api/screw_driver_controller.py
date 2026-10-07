@@ -221,9 +221,23 @@ class ScrewDriverController:
 			                 % self.config.max_speed_rpm)
 		return speed_rpm
 
-	def _run_rotation(self, clockwise, speed_rpm, target_degrees, max_seconds):
+	def _stop_above_load_or_none(self, stop_above_load_percent):
+		"""A lower load threshold for one rotation - e.g. "stop once the bit has
+		bitten" - checked as well as the config's load_limit_percent, never
+		instead of it, so it has to be below that limit to mean anything."""
+		if stop_above_load_percent is None:
+			return None
+		stop_above_load_percent = float(stop_above_load_percent)
+		if not 0 < stop_above_load_percent < self.config.load_limit_percent:
+			raise ValueError("stop_above_load_percent must be above 0 and below "
+			                 "load_limit_percent (%s)" % self.config.load_limit_percent)
+		return stop_above_load_percent
+
+	def _run_rotation(self, clockwise, speed_rpm, target_degrees, max_seconds,
+	                  stop_above_load_percent=None):
 		"""The one rotation loop. Turns until target_degrees (None = until
-		stopped), the load limit, max_seconds, or stop(). Returns what happened."""
+		stopped), the load limit, stop_above_load_percent (if given),
+		max_seconds, or stop(). Returns what happened."""
 		servo_direction = self._servo_direction(clockwise)
 		self._prepare_wheel_mode()
 		previous_position = self._read_2_bytes(PRESENT_POSITION, "start position")
@@ -252,6 +266,9 @@ class ScrewDriverController:
 					break
 				if abs(load_percent) > self.config.load_limit_percent:
 					stopped_because = "load limit"
+					break
+				if stop_above_load_percent is not None and abs(load_percent) > stop_above_load_percent:
+					stopped_because = "load threshold"
 					break
 				if elapsed_seconds > max_seconds:
 					stopped_because = "timed out"
@@ -285,16 +302,21 @@ class ScrewDriverController:
 		self._stop_running_rotation()
 		self._rotation_finished.clear()
 
-	def rotate_by_degrees(self, degrees, speed_rpm=None):
+	def rotate_by_degrees(self, degrees, speed_rpm=None, stop_above_load_percent=None):
 		"""Turn the bit by `degrees`: positive clockwise (tightens), negative
 		anticlockwise (loosens). Waits until it has finished, then returns what
-		happened, with the load trace (see the module docstring)."""
+		happened, with the load trace (see the module docstring).
+
+		stop_above_load_percent stops it early once the load passes that, e.g.
+		when the bit drops into the screw head and starts to meet resistance."""
 		speed_rpm = self._speed_rpm_or_default(speed_rpm)
+		stop_above_load_percent = self._stop_above_load_or_none(stop_above_load_percent)
 		self._begin_rotation()
 		try:
 			result = self._run_rotation(clockwise=degrees > 0, speed_rpm=speed_rpm,
 			                            target_degrees=abs(degrees),
-			                            max_seconds=self.config.max_rotation_seconds)
+			                            max_seconds=self.config.max_rotation_seconds,
+			                            stop_above_load_percent=stop_above_load_percent)
 		finally:
 			self._rotation_finished.set()
 		result["requested_degrees"] = degrees

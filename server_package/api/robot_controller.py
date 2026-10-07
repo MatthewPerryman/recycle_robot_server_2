@@ -36,7 +36,12 @@ class RobotController:
 		return has_moved
 
 	## Move the robot arm to this vector
-	def move_to(self, new_location, speed=100000):
+	##
+	## speed is in mm/min (the uArm SDK's unit); the default is as fast as it goes.
+	## correct_wrist=False skips the wrist turn after the move - for small moves
+	## with a tool engaged, e.g. lifting a screwdriver bit as the screw comes
+	## out, where turning the wrist would twist the bit in the screw head.
+	def move_to(self, new_location, speed=100000, correct_wrist=True):
 		self.start_transmission()
 
 		print("New Location: ", new_location)
@@ -48,6 +53,9 @@ class RobotController:
 			self.swift.set_position(x=new_location[0], y=new_location[1], z=new_location[2], wait=True, speed=speed)
 
 			self.end_transmission()
+
+			if not correct_wrist:
+				return True
 
 			#if actual_location[0] == new_location[0] and actual_location[1] == new_location[1] and actual_location[2] == new_location[2]:
 			# Calculate the angle of the robotic arm and move the wrist by that angle anticlockwise

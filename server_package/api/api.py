@@ -139,13 +139,20 @@ def get_image_for_detection():
 	return send_file(buffer, as_attachment=True, download_name='depth_imgs.csv')
 
 
-# Set robot position
+# Set robot position. POST {"Xd":..,"Yd":..,"Zd":..}, plus optionally
+# "speed_mm_per_minute" (default: as fast as it goes) and "correct_wrist"
+# (default true; false leaves the wrist where it is - see move_to).
 @app.route('/set_position/', methods=['POST'])
 def set_position():
 	new_json = json.loads(request.data)
 	new_location = [new_json['Xd'], new_json['Yd'], new_json['Zd']]
 
-	response = controller.move_to(new_location)
+	move_options = {}
+	if 'speed_mm_per_minute' in new_json:
+		move_options['speed'] = float(new_json['speed_mm_per_minute'])
+	if 'correct_wrist' in new_json:
+		move_options['correct_wrist'] = bool(new_json['correct_wrist'])
+	response = controller.move_to(new_location, **move_options)
 
 	return jsonify(response=response)
 
@@ -277,7 +284,8 @@ def screw_driver_status():
 	return jsonify(screw_driver.status())
 
 
-# POST {"degrees": -720, "speed_rpm": 10}  (speed_rpm optional)
+# POST {"degrees": -720, "speed_rpm": 10, "stop_above_load_percent": 12}
+# (speed_rpm and stop_above_load_percent optional)
 # Positive = clockwise. Waits until the rotation ends, then returns what
 # happened, including the load-against-angle samples.
 @app.route('/screw_driver/rotate_by_degrees/', methods=['POST'])
@@ -287,7 +295,8 @@ def screw_driver_rotate_by_degrees():
 	request_body = json.loads(request.data)
 	try:
 		result = screw_driver.rotate_by_degrees(float(request_body['degrees']),
-		                                        request_body.get('speed_rpm'))
+		                                        request_body.get('speed_rpm'),
+		                                        request_body.get('stop_above_load_percent'))
 	except ValueError as exc:
 		return jsonify(error=str(exc)), 400
 	return jsonify(result)
