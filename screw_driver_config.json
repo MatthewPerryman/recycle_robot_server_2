@@ -6,7 +6,8 @@
     "default_speed_rpm": 10,
     "max_speed_rpm": 40,
     "acceleration": 50,
-    "torque_limit_percent": 30,
-    "load_limit_percent": 25,
+    "torque_limit_percent": 55,
+    "free_spin_load_percent_per_rpm": 0.85,
+    "extra_load_limit_percent": 20,
     "max_rotation_seconds": 60
 }

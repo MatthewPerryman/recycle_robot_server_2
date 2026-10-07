@@ -21,12 +21,27 @@ rotate_by_degrees returns, as well as how far it turned, a sample every
 screw climbs to the load limit, one that has broken free drops to a low
 plateau. The load is the servo's own reading, in % of its maximum torque.
 
+EXTRA LOAD: LOAD ABOVE FREE SPIN
+
+Spinning with nothing on the bit, the load reading rises with speed: ~0.85%
+per rpm, measured 2026-10-07 (5% at 5 rpm, 17% at 20, 25.6% at 30). So a
+fixed load limit leaves a screw less and less room as the speed goes up -
+at 30 rpm a 25% limit stopped the bit before it touched anything. The limits
+here are on EXTRA load: the reading minus free_spin_load_percent_per_rpm x
+the commanded rpm, which is roughly the screw's share.
+
+The reading cannot go above torque_limit_percent, so free spin plus
+extra_load_limit_percent must fit under it at the speed asked for, or the
+servo would stall without ever reaching the limit. A rotation where it does
+not fit is refused.
+
 SAFETY
 
 Every rotation - including rotate(), which returns straight away - runs
-the same loop, which stops the motor if the load passes load_limit_percent,
-if it has run longer than max_rotation_seconds, or if stop() is called. A
-laptop that loses its connection mid-rotation cannot leave it spinning.
+the same loop, which stops the motor if the extra load passes
+extra_load_limit_percent, if it has run longer than max_rotation_seconds,
+or if stop() is called. A laptop that loses its connection mid-rotation
+cannot leave it spinning.
 """
 import json
 import threading
@@ -76,19 +91,22 @@ class ScrewDriverConfig:
 	default_speed_rpm: float = 10.0
 	max_speed_rpm: float = 40.0
 	acceleration: int = 50                  # 0-254, units of 100 steps/s per second
-	torque_limit_percent: float = 30.0      # the most torque the servo may use
-	load_limit_percent: float = 25.0        # stop a rotation above this load
+	torque_limit_percent: float = 55.0      # the most torque the servo may use
+	free_spin_load_percent_per_rpm: float = 0.85    # load reading with nothing on the bit
+	extra_load_limit_percent: float = 20.0  # stop a rotation this far above free spin
 	max_rotation_seconds: float = 15.0      # stop any rotation that runs longer than this
 
 	def __post_init__(self):
 		if not 0 < self.torque_limit_percent <= 100:
 			raise ValueError("torque_limit_percent must be between 0 and 100")
-		# The load reading cannot go above the torque limit, so a load limit at
-		# or above it would never trigger - the servo would just sit stalled.
-		if not 0 < self.load_limit_percent < self.torque_limit_percent:
-			raise ValueError("load_limit_percent (%s) must be above 0 and below "
+		if self.free_spin_load_percent_per_rpm < 0:
+			raise ValueError("free_spin_load_percent_per_rpm must not be negative")
+		# The load reading cannot go above the torque limit, so a limit at or
+		# above it would never trigger - the servo would just sit stalled.
+		if not 0 < self.extra_load_limit_percent < self.torque_limit_percent:
+			raise ValueError("extra_load_limit_percent (%s) must be above 0 and below "
 			                 "torque_limit_percent (%s)"
-			                 % (self.load_limit_percent, self.torque_limit_percent))
+			                 % (self.extra_load_limit_percent, self.torque_limit_percent))
 		if not 0 < self.default_speed_rpm <= self.max_speed_rpm:
 			raise ValueError("default_speed_rpm must be above 0 and no more than max_speed_rpm")
 		if not 0 <= self.acceleration <= 254:
@@ -214,30 +232,44 @@ class ScrewDriverController:
 			self._mode = WHEEL_MODE
 		self._write_1_byte(TORQUE_ENABLE, 1, "torque enable")
 
+	def free_spin_load_percent(self, speed_rpm):
+		"""The load reading expected at this speed with nothing on the bit."""
+		return self.config.free_spin_load_percent_per_rpm * speed_rpm
+
 	def _speed_rpm_or_default(self, speed_rpm):
 		speed_rpm = self.config.default_speed_rpm if speed_rpm is None else float(speed_rpm)
 		if not 0 < speed_rpm <= self.config.max_speed_rpm:
 			raise ValueError("speed_rpm must be above 0 and no more than %s"
 			                 % self.config.max_speed_rpm)
+		# See EXTRA LOAD in the module docstring.
+		highest_load_needed = self.free_spin_load_percent(speed_rpm) + self.config.extra_load_limit_percent
+		if highest_load_needed >= self.config.torque_limit_percent:
+			raise ValueError(
+				"at %s rpm free spin reads ~%.1f%%, so the %s%% extra load limit needs %.1f%% "
+				"- not below the %s%% torque limit; turn slower or raise torque_limit_percent"
+				% (speed_rpm, self.free_spin_load_percent(speed_rpm),
+				   self.config.extra_load_limit_percent, highest_load_needed,
+				   self.config.torque_limit_percent))
 		return speed_rpm
 
-	def _stop_above_load_or_none(self, stop_above_load_percent):
-		"""A lower load threshold for one rotation - e.g. "stop once the bit has
-		bitten" - checked as well as the config's load_limit_percent, never
+	def _stop_above_extra_load_or_none(self, stop_above_extra_load_percent):
+		"""A lower extra-load threshold for one rotation - e.g. "stop once the
+		bit has bitten" - checked as well as extra_load_limit_percent, never
 		instead of it, so it has to be below that limit to mean anything."""
-		if stop_above_load_percent is None:
+		if stop_above_extra_load_percent is None:
 			return None
-		stop_above_load_percent = float(stop_above_load_percent)
-		if not 0 < stop_above_load_percent < self.config.load_limit_percent:
-			raise ValueError("stop_above_load_percent must be above 0 and below "
-			                 "load_limit_percent (%s)" % self.config.load_limit_percent)
-		return stop_above_load_percent
+		stop_above_extra_load_percent = float(stop_above_extra_load_percent)
+		if not 0 < stop_above_extra_load_percent < self.config.extra_load_limit_percent:
+			raise ValueError("stop_above_extra_load_percent must be above 0 and below "
+			                 "extra_load_limit_percent (%s)" % self.config.extra_load_limit_percent)
+		return stop_above_extra_load_percent
 
 	def _run_rotation(self, clockwise, speed_rpm, target_degrees, max_seconds,
-	                  stop_above_load_percent=None):
+	                  stop_above_extra_load_percent=None):
 		"""The one rotation loop. Turns until target_degrees (None = until
-		stopped), the load limit, stop_above_load_percent (if given),
-		max_seconds, or stop(). Returns what happened."""
+		stopped), the extra load limit, stop_above_extra_load_percent (if
+		given), max_seconds, or stop(). Returns what happened."""
+		free_spin_load_percent = self.free_spin_load_percent(speed_rpm)
 		servo_direction = self._servo_direction(clockwise)
 		self._prepare_wheel_mode()
 		previous_position = self._read_2_bytes(PRESENT_POSITION, "start position")
@@ -264,10 +296,12 @@ class ScrewDriverController:
 				peak_load_percent = max(peak_load_percent, abs(load_percent))
 				if target_degrees is not None and degrees_turned >= target_degrees:
 					break
-				if abs(load_percent) > self.config.load_limit_percent:
+				extra_load_percent = abs(load_percent) - free_spin_load_percent
+				if extra_load_percent > self.config.extra_load_limit_percent:
 					stopped_because = "load limit"
 					break
-				if stop_above_load_percent is not None and abs(load_percent) > stop_above_load_percent:
+				if stop_above_extra_load_percent is not None \
+						and extra_load_percent > stop_above_extra_load_percent:
 					stopped_because = "load threshold"
 					break
 				if elapsed_seconds > max_seconds:
@@ -286,6 +320,7 @@ class ScrewDriverController:
 			"degrees_turned": round(degrees_turned, 1),   # in the requested direction
 			"stopped_because": stopped_because,
 			"peak_load_percent": peak_load_percent,
+			"free_spin_load_percent": round(free_spin_load_percent, 1),   # subtracted for the limits
 			"seconds": round(time.monotonic() - started, 2),
 			"sample_columns": ["seconds", "degrees_turned", "load_percent"],
 			"samples": samples,
@@ -302,21 +337,22 @@ class ScrewDriverController:
 		self._stop_running_rotation()
 		self._rotation_finished.clear()
 
-	def rotate_by_degrees(self, degrees, speed_rpm=None, stop_above_load_percent=None):
+	def rotate_by_degrees(self, degrees, speed_rpm=None, stop_above_extra_load_percent=None):
 		"""Turn the bit by `degrees`: positive clockwise (tightens), negative
 		anticlockwise (loosens). Waits until it has finished, then returns what
 		happened, with the load trace (see the module docstring).
 
-		stop_above_load_percent stops it early once the load passes that, e.g.
-		when the bit drops into the screw head and starts to meet resistance."""
+		stop_above_extra_load_percent stops it early once the load is that far
+		above free spin, e.g. when the bit drops into the screw head and starts
+		to meet resistance."""
 		speed_rpm = self._speed_rpm_or_default(speed_rpm)
-		stop_above_load_percent = self._stop_above_load_or_none(stop_above_load_percent)
+		stop_above_extra_load_percent = self._stop_above_extra_load_or_none(stop_above_extra_load_percent)
 		self._begin_rotation()
 		try:
 			result = self._run_rotation(clockwise=degrees > 0, speed_rpm=speed_rpm,
 			                            target_degrees=abs(degrees),
 			                            max_seconds=self.config.max_rotation_seconds,
-			                            stop_above_load_percent=stop_above_load_percent)
+			                            stop_above_extra_load_percent=stop_above_extra_load_percent)
 		finally:
 			self._rotation_finished.set()
 		result["requested_degrees"] = degrees

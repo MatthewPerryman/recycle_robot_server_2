@@ -136,9 +136,9 @@ class StepsMovedTest(unittest.TestCase):
 
 
 class ConfigTest(unittest.TestCase):
-	def test_load_limit_must_be_below_torque_limit(self):
+	def test_extra_load_limit_must_be_below_torque_limit(self):
 		with self.assertRaises(ValueError):
-			sdc.ScrewDriverConfig(port="X", torque_limit_percent=30, load_limit_percent=30)
+			sdc.ScrewDriverConfig(port="X", torque_limit_percent=30, extra_load_limit_percent=30)
 
 	def test_defaults_are_valid(self):
 		sdc.ScrewDriverConfig(port="X")
@@ -175,25 +175,41 @@ class RotateByDegreesTest(unittest.TestCase):
 		self.assertGreaterEqual(result["degrees_turned"], 360)
 		self.assertLess(result["degrees_turned"], 380)
 
-	def test_stops_at_the_load_limit(self):
-		servo = FakeServo(load_for_degrees=lambda degrees: 28.0 if degrees > 30 else 5.0)
-		result = make_controller(servo).rotate_by_degrees(720)
+	# make_controller turns at 40 rpm by default: free spin 0.85 x 40 = 34%.
+
+	def test_stops_at_the_extra_load_limit(self):
+		servo = FakeServo(load_for_degrees=lambda degrees: 34.0 + 22.0 if degrees > 30 else 34.0)
+		result = make_controller(servo, torque_limit_percent=60).rotate_by_degrees(720)
 		self.assertEqual(result["stopped_because"], "load limit")
 		self.assertLess(result["degrees_turned"], 60)
-		self.assertGreaterEqual(result["peak_load_percent"], 28.0)
+		self.assertEqual(result["free_spin_load_percent"], 34.0)
 
-	def test_stops_early_at_a_given_load_threshold(self):
-		servo = FakeServo(load_for_degrees=lambda degrees: 15.0 if degrees > 30 else 5.0)
-		result = make_controller(servo).rotate_by_degrees(-720, stop_above_load_percent=12)
+	def test_free_spin_load_alone_does_not_stop_it(self):
+		# 30 rpm read 25.6% in the air on 2026-10-07 and tripped the old fixed
+		# 25% limit; above free spin it is nothing.
+		servo = FakeServo(load_for_degrees=lambda degrees: 25.6)
+		result = make_controller(servo).rotate_by_degrees(90, speed_rpm=30)
+		self.assertEqual(result["stopped_because"], "reached the angle")
+
+	def test_stops_early_at_a_given_extra_load_threshold(self):
+		servo = FakeServo(load_for_degrees=lambda degrees: 34.0 + 10.0 if degrees > 30 else 34.0)
+		result = make_controller(servo).rotate_by_degrees(-720, stop_above_extra_load_percent=8)
 		self.assertEqual(result["stopped_because"], "load threshold")
 		self.assertLess(result["degrees_turned"], 60)
 		self.assertEqual(servo.speeds_written[-1], 0)
 
-	def test_load_threshold_must_be_below_the_load_limit(self):
+	def test_extra_load_threshold_must_be_below_the_extra_load_limit(self):
 		controller = make_controller(FakeServo())
-		for threshold in (0, 25, 40):
+		for threshold in (0, 20, 40):
 			with self.assertRaises(ValueError):
-				controller.rotate_by_degrees(90, stop_above_load_percent=threshold)
+				controller.rotate_by_degrees(90, stop_above_extra_load_percent=threshold)
+
+	def test_refuses_a_speed_whose_free_spin_leaves_no_room_under_the_torque_limit(self):
+		# 0.85 x 40 + 20 = 54, not below a 50% torque limit: it could stall unseen.
+		controller = make_controller(FakeServo(), torque_limit_percent=50)
+		with self.assertRaises(ValueError):
+			controller.rotate_by_degrees(90, speed_rpm=40)
+		controller.rotate_by_degrees(90, speed_rpm=20)       # 37: fits
 
 	def test_times_out(self):
 		servo = FakeServo()

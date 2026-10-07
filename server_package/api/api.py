@@ -284,8 +284,9 @@ def screw_driver_status():
 	return jsonify(screw_driver.status())
 
 
-# POST {"degrees": -720, "speed_rpm": 10, "stop_above_load_percent": 12}
-# (speed_rpm and stop_above_load_percent optional)
+# POST {"degrees": -720, "speed_rpm": 10, "stop_above_extra_load_percent": 8}
+# (speed_rpm and stop_above_extra_load_percent optional; extra load = load
+# above free spin at that speed - see screw_driver_controller.py)
 # Positive = clockwise. Waits until the rotation ends, then returns what
 # happened, including the load-against-angle samples.
 @app.route('/screw_driver/rotate_by_degrees/', methods=['POST'])
@@ -296,7 +297,7 @@ def screw_driver_rotate_by_degrees():
 	try:
 		result = screw_driver.rotate_by_degrees(float(request_body['degrees']),
 		                                        request_body.get('speed_rpm'),
-		                                        request_body.get('stop_above_load_percent'))
+		                                        request_body.get('stop_above_extra_load_percent'))
 	except ValueError as exc:
 		return jsonify(error=str(exc)), 400
 	return jsonify(result)
