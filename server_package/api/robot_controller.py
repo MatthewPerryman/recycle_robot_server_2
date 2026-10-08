@@ -38,10 +38,11 @@ class RobotController:
 	## Move the robot arm to this vector
 	##
 	## speed is in mm/min (the uArm SDK's unit); the default is as fast as it goes.
-	## correct_wrist=False skips the wrist turn after the move - for small moves
-	## with a tool engaged, e.g. lifting a screwdriver bit as the screw comes
-	## out, where turning the wrist would twist the bit in the screw head.
-	def move_to(self, new_location, speed=100000, correct_wrist=True):
+	##
+	## There is no wrist motor on this arm: the camera and screwdriver holder
+	## is fixed to the head, and turns only with the base. Until 2026-10-08
+	## every move ended with a set_wrist() to a servo that is not fitted.
+	def move_to(self, new_location, speed=100000):
 		self.start_transmission()
 
 		print("New Location: ", new_location)
@@ -53,21 +54,6 @@ class RobotController:
 			self.swift.set_position(x=new_location[0], y=new_location[1], z=new_location[2], wait=True, speed=speed)
 
 			self.end_transmission()
-
-			if not correct_wrist:
-				return True
-
-			#if actual_location[0] == new_location[0] and actual_location[1] == new_location[1] and actual_location[2] == new_location[2]:
-			# Calculate the angle of the robotic arm and move the wrist by that angle anticlockwise
-			uarm_angle = self.swift.get_servo_angle(0)
-			print(f"uarm_angle: {uarm_angle}")
-
-			# Calculate the difference subtracted from the original angle
-			angle_diff = uarm_angle-90
-			print(f"angle_diff: {angle_diff}")
-
-			# Move the wrist by the difference
-			self.swift.set_wrist(90+angle_diff, wait=True)
 			has_moved = True
 		else:
 			has_moved = False
@@ -101,13 +87,6 @@ class RobotController:
 
 		# Waits for the whole queued path, not just the last command.
 		self.swift.flush_cmd(wait_stop=True)
-
-		# Wrist correction once, at the landing point. The intermediate points
-		# are travel, and a wait=True wrist move between them would break the
-		# blend that is the whole reason this method exists.
-		uarm_angle = self.swift.get_servo_angle(0)
-		angle_diff = uarm_angle - 90
-		self.swift.set_wrist(90 + angle_diff, wait=True)
 
 		self.end_transmission()
 		return True

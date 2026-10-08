@@ -140,8 +140,8 @@ def get_image_for_detection():
 
 
 # Set robot position. POST {"Xd":..,"Yd":..,"Zd":..}, plus optionally
-# "speed_mm_per_minute" (default: as fast as it goes) and "correct_wrist"
-# (default true; false leaves the wrist where it is - see move_to).
+# "speed_mm_per_minute" (default: as fast as it goes). A "correct_wrist" key
+# from older laptop code is ignored: the arm has no wrist motor (see move_to).
 @app.route('/set_position/', methods=['POST'])
 def set_position():
 	new_json = json.loads(request.data)
@@ -150,8 +150,6 @@ def set_position():
 	move_options = {}
 	if 'speed_mm_per_minute' in new_json:
 		move_options['speed'] = float(new_json['speed_mm_per_minute'])
-	if 'correct_wrist' in new_json:
-		move_options['correct_wrist'] = bool(new_json['correct_wrist'])
 	response = controller.move_to(new_location, **move_options)
 
 	return jsonify(response=response)
@@ -206,13 +204,6 @@ def device_info():
 def get_position():
 	location = controller.swift.get_position()
 	return jsonify({"Xd": location[0], "Yd": location[1], "Zd": location[2]})
-
-# Retrieve robot wrist angle
-@app.route('/get_wrist_angle/', methods=['GET'])
-def get_wrist_angle():
-	angle = controller.swift.get_servo_angle(0)
-	return jsonify({"angle": angle})
-
 
 @app.route('/take_photo', methods=['GET'])
 def take_photo():
