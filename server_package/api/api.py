@@ -320,6 +320,20 @@ def screw_driver_rotate():
 	return jsonify(result)
 
 
+# GET /screw_driver/samples/?since=N - the running rotation's load samples
+# from index N on, as they are recorded, so the laptop can watch a rotate()
+# while it turns. Reads nothing from the servo. See samples_since.
+@app.route('/screw_driver/samples/', methods=['GET'])
+def screw_driver_samples():
+	if screw_driver is None:
+		return screw_driver_unavailable()
+	try:
+		since = int(request.args.get('since', 0))
+	except ValueError:
+		return jsonify(error="since must be a whole number"), 400
+	return jsonify(screw_driver.samples_since(since))
+
+
 @app.route('/screw_driver/stop/', methods=['POST'])
 def screw_driver_stop():
 	if screw_driver is None:

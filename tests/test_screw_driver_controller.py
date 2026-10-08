@@ -276,6 +276,40 @@ class ContinuousRotateTest(unittest.TestCase):
 			make_controller(FakeServo()).rotate("sideways")
 
 
+class SamplesSinceTest(unittest.TestCase):
+	def test_samples_arrive_while_it_turns_and_carry_on_from_an_index(self):
+		controller = make_controller(FakeServo())
+		controller.rotate("anticlockwise", speed_rpm=10)
+		time.sleep(0.3)
+		first = controller.samples_since(0)
+		self.assertTrue(first["rotating"])
+		self.assertGreater(len(first["samples"]), 3)
+		time.sleep(0.2)
+		second = controller.samples_since(first["next_index"])
+		self.assertEqual(second["first_index"], first["next_index"])
+		self.assertGreater(len(second["samples"]), 0)
+		self.assertGreater(second["samples"][0][0], first["samples"][-1][0])
+		result = controller.stop()
+		afterwards = controller.samples_since(0)
+		self.assertFalse(afterwards["rotating"])
+		self.assertEqual(afterwards["samples"], result["samples"])
+
+	def test_a_new_rotation_gets_a_new_number_and_list(self):
+		controller = make_controller(FakeServo())
+		controller.rotate_by_degrees(30, speed_rpm=40)
+		first = controller.samples_since(0)
+		controller.rotate_by_degrees(30, speed_rpm=40)
+		second = controller.samples_since(0)
+		self.assertEqual(second["rotation_number"], first["rotation_number"] + 1)
+		self.assertIsNot(controller.last_rotation["samples"], first["samples"])
+
+	def test_before_any_rotation_there_is_nothing(self):
+		answer = make_controller(FakeServo()).samples_since(0)
+		self.assertEqual(answer["samples"], [])
+		self.assertFalse(answer["rotating"])
+		self.assertEqual(answer["rotation_number"], 0)
+
+
 class ConnectionTest(unittest.TestCase):
 	def test_no_reply_raises_and_closes_the_port(self):
 		with self.assertRaises(sdc.ScrewDriverError):

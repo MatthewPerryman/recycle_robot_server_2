@@ -42,6 +42,13 @@ the same loop, which stops the motor if the extra load passes
 extra_load_limit_percent, if it has run longer than max_rotation_seconds,
 or if stop() is called. A laptop that loses its connection mid-rotation
 cannot leave it spinning.
+
+WATCHING A ROTATION AS IT TURNS
+
+rotate() returns straight away, and its samples only come back with stop().
+samples_since() hands over the ones recorded so far, without reading the
+servo, so a laptop can watch the load while the screw turns - e.g. to stop
+once the screw has come free - and the serial bus carries nothing extra.
 """
 import json
 import threading
@@ -161,6 +168,10 @@ class ScrewDriverController:
 		self._rotation_finished.set()
 		self._mode = None
 		self._connected = False
+		# The running rotation's samples (the last one's, once it has ended),
+		# for samples_since. A new rotation gets a new list and a new number.
+		self._samples_so_far = []
+		self._rotation_number = 0
 
 		self._port = PortHandler(config.port)
 		self._packet_handler = PacketHandler(PROTOCOL_END)
@@ -279,6 +290,8 @@ class ScrewDriverController:
 		servo_steps = 0                     # signed, in the servo's own direction;
 		                                    # x servo_direction = progress the requested way
 		samples = []                        # [seconds, degrees turned, load %, current (raw)]
+		self._samples_so_far = samples      # the same list, read by samples_since as it grows
+		self._rotation_number += 1
 		peak_load_percent = 0.0
 		peak_current_raw = 0
 		stopped_because = "reached the angle"
@@ -402,6 +415,26 @@ class ScrewDriverController:
 
 	def is_rotating(self):
 		return not self._rotation_finished.is_set()
+
+	def samples_since(self, first_index):
+		"""The current rotation's samples from first_index on, as they are
+		recorded; after it ends, the last rotation's. Reads nothing from the
+		servo. rotation_number changes when a new rotation starts, so a watcher
+		can tell its index belongs to an older one."""
+		# Whether it is still rotating is read FIRST: if it has finished, every
+		# sample is already in the list, so a "not rotating" answer is complete.
+		rotating = self.is_rotating()
+		samples = self._samples_so_far
+		first_index = max(0, int(first_index))
+		new_samples = samples[first_index:]
+		return {
+			"rotating": rotating,
+			"rotation_number": self._rotation_number,
+			"first_index": first_index,
+			"next_index": first_index + len(new_samples),
+			"sample_columns": ["seconds", "degrees_turned", "load_percent", "current_raw"],
+			"samples": new_samples,
+		}
 
 	def status(self):
 		"""What the servo is doing now, plus a summary of the last rotation."""
